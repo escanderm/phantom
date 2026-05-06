@@ -50,12 +50,18 @@ The relay sees only encrypted blobs and doesn't know who you are.
 
 ## Download
 
-→ [Latest release](../../releases/latest)
+→ **[Latest release](../../releases/latest)**
 
-macOS universal (Apple Silicon + Intel). No installation required.
+| Platform | File | Notes |
+|---|---|---|
+| macOS | `Phantom-x.x.x-universal.dmg` | Apple Silicon + Intel |
+| Linux | `Phantom-x.x.x.AppImage` | No installation required |
+| Windows | `Phantom.Setup.x.x.x.exe` | NSIS installer |
 
-> **First launch on macOS:** right-click → Open → Open Anyway  
+> **macOS first launch:** right-click → Open → Open Anyway  
 > Or in Terminal: `xattr -cr /Applications/Phantom.app`
+>
+> **Linux:** `chmod +x Phantom-*.AppImage && ./Phantom-*.AppImage`
 
 ---
 
