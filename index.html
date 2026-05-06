@@ -248,7 +248,8 @@
         <button class="btn-secondary" onclick="showJoin()">Join</button>
     </div>
     <div class="status" id="home-status"></div>
-    <div style="position:absolute; bottom:20px; font-size:11px; color:#666; -webkit-app-region:no-drag;">ver. 0.2.1</div>
+    <div style="position:absolute; bottom:20px; font-size:11px; color:#666; -webkit-app-region:no-drag;" id="ver-label"></div>
+    <script>document.getElementById('ver-label').textContent = 'ver. ' + require('./package.json').version;</script>
 </div>
 
 <!-- Ожидание пира -->

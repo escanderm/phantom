@@ -182,6 +182,8 @@ class Session {
         chatSub.on('event', (event) => {
             try {
                 if (!event.content || event.content.length > 60000) return;
+                if (this._seenIds?.has(event.id)) return;
+                this._seenIds?.add(event.id);
                 const msg = JSON.parse(event.content);
                 if (msg.from === this.fingerprint) return;
                 const text = this._decrypt(msg.data);
@@ -190,6 +192,36 @@ class Session {
         });
 
         if (this.onPeerConnected) this.onPeerConnected(this.peerFingerprint);
+
+        // Переподписываемся каждые 30 сек на случай если relay оборвал соединение
+        this._seenIds = new Set();
+        this._keepalive = setInterval(() => this._resubscribeChat(), 15000);
+    }
+
+    _resubscribeChat() {
+        if (!this.sharedSecret) return;
+        try {
+            const sub = this.pool.sub(RELAYS, [{
+                kinds: [KIND_CHAT],
+                '#t': [this._chatTag()],
+                since: Math.floor(Date.now() / 1000) - 20,
+            }]);
+            sub.on('event', (event) => {
+                try {
+                    if (!event.content || event.content.length > 60000) return;
+                    if (this._seenIds.has(event.id)) return;
+                    this._seenIds.add(event.id);
+                    if (this._seenIds.size > 200) {
+                        const first = this._seenIds.values().next().value;
+                        this._seenIds.delete(first);
+                    }
+                    const msg = JSON.parse(event.content);
+                    if (msg.from === this.fingerprint) return;
+                    const text = this._decrypt(msg.data);
+                    if (this.onMessage) this.onMessage(text);
+                } catch(e) {}
+            });
+        } catch(e) {}
     }
 
     async sendMessage(text) {
@@ -235,6 +267,7 @@ class Session {
     }
 
     close() {
+        if (this._keepalive) clearInterval(this._keepalive);
         this.pool?.close(RELAYS);
         this.x25519Keys   = null;
         this.sharedSecret = null;
