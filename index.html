@@ -485,17 +485,54 @@ chatScreen.addEventListener('drop', (e) => {
     if (file) sendImage(file);
 });
 
-// События от main process
+// ── Звук и уведомления ──
+
+const audioCtx = new AudioContext();
+
+function playBeep() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.25);
+}
+
+function notify(title, body) {
+    if (Notification.permission === 'granted') {
+        new Notification(title, { body, silent: true });
+    }
+}
+
+// Запрашиваем разрешение при старте
+Notification.requestPermission();
+
+// ── События от main process ──
+
 ipcRenderer.on('peer-connected', (_, peerFp) => {
     openChat(peerFp, null);
+    playBeep();
+    notify('Phantom', `${peerFp} connected`);
 });
 
 ipcRenderer.on('message', (_, raw) => {
     try {
         const parsed = JSON.parse(raw);
-        if (parsed.type === 'image') { addImgMsg(parsed.src, 'theirs'); return; }
+        if (parsed.type === 'image') {
+            addImgMsg(parsed.src, 'theirs');
+            playBeep();
+            notify('Phantom', 'Image received');
+            return;
+        }
     } catch(e) {}
     addMsg(raw, 'theirs');
+    playBeep();
+    const peerFp = document.getElementById('peer-fp-label').textContent;
+    notify(`${peerFp}`, raw.length > 50 ? raw.slice(0, 50) + '…' : raw);
 });
 </script>
 </body>
