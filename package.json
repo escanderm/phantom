@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac"
+    "build": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win"
   },
   "build": {
     "appId": "com.phantom.messenger",
@@ -24,10 +26,15 @@
     },
     "dmg": {
       "title": "Phantom",
-      "window": {
-        "width": 540,
-        "height": 380
-      }
+      "window": { "width": 540, "height": 380 }
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Network"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.icns"
     },
     "files": [
       "index.html",
