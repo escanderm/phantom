@@ -71,11 +71,13 @@ The relay sees only encrypted blobs and doesn't know who you are.
 git clone git@github.com:escanderm/phantom.git
 cd phantom
 npm install
-npm start          # run in dev mode
-npm run build      # build DMG
+npm start            # run in dev mode
+npm run build        # build macOS DMG
+npm run build:linux  # build Linux AppImage
+npm run build:win    # build Windows installer
 ```
 
-Requires Node.js 18+.
+Requires Node.js 22+.
 
 ---
 
