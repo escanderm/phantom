@@ -12,11 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install
-      - run: npm run build -- --mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:mac
       - uses: actions/upload-artifact@v4
         with:
           name: mac-dmg
@@ -28,11 +26,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install
-      - run: npm run build -- --linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:linux
       - uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
@@ -44,11 +40,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install
-      - run: npm run build -- --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:win
       - uses: actions/upload-artifact@v4
         with:
           name: win-exe
