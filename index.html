@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phantom</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: rgba(0, 0, 0, 0.4);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-app-region: drag;
+            overflow: hidden;
+        }
+
+        /* ── Экраны ── */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            gap: 0;
+            -webkit-app-region: drag;
+        }
+        .screen.active { display: flex; }
+
+        /* ── Лого ── */
+        .logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 52px;
+        }
+        .logo-icon { font-size: 36px; }
+        .logo-name { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; }
+        .logo-sub  { font-size: 12px; color: #444; letter-spacing: 0.8px; }
+
+        /* ── Кнопки ── */
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 220px;
+            -webkit-app-region: no-drag;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            font-family: inherit;
+            letter-spacing: -0.1px;
+        }
+        button:active { transform: scale(0.97); opacity: 0.8; }
+        button:disabled { opacity: 0.3; cursor: default; }
+
+        .btn-primary { background: #fff; color: #0a0a0a; }
+        .btn-secondary { background: #161616; color: #fff; border: 1px solid #222; }
+        .btn-send { background: #fff; color: #0a0a0a; border-radius: 8px; padding: 10px 16px; width: auto; }
+
+        /* ── Fingerprint ── */
+        .fp-box {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 14px;
+            padding: 28px 32px;
+            text-align: center;
+            margin-bottom: 32px;
+            -webkit-app-region: no-drag;
+        }
+        .fp-label { font-size: 11px; color: #444; letter-spacing: 1px; margin-bottom: 12px; }
+        .fp-code {
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+        .fp-hint { font-size: 11px; color: #333; margin-top: 10px; }
+
+        /* ── Join input ── */
+        .join-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            -webkit-app-region: no-drag;
+            margin-bottom: 24px;
+        }
+        input {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            text-align: center;
+            padding: 16px 24px;
+            width: 220px;
+            font-family: inherit;
+            outline: none;
+        }
+        #join-input { text-transform: uppercase; }
+        input:focus { border-color: #444; }
+        input::placeholder { color: #333; letter-spacing: 0; font-weight: 400; font-size: 14px; }
+
+        /* ── Чат ── */
+        .chat-header {
+            width: 100%;
+            padding: 52px 20px 16px;
+            border-bottom: 1px solid #161616;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            -webkit-app-region: drag;
+            flex-shrink: 0;
+        }
+        .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3; flex-shrink: 0; }
+        .peer-name { font-size: 13px; color: #666; }
+        .peer-fp { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+
+        .messages {
+            flex: 1;
+            width: 100%;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+        .messages::-webkit-scrollbar { width: 0; }
+
+        .msg {
+            max-width: 75%;
+            padding: 9px 13px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .msg.mine {
+            align-self: flex-end;
+            background: #fff;
+            color: #0a0a0a;
+            border-bottom-right-radius: 4px;
+        }
+        .msg.theirs {
+            align-self: flex-start;
+            background: #1a1a1a;
+            color: #fff;
+            border-bottom-left-radius: 4px;
+        }
+        .msg.system {
+            align-self: center;
+            background: none;
+            color: #333;
+            font-size: 11px;
+            padding: 0;
+        }
+        .msg.img-msg { padding: 4px; background: transparent; }
+        .msg.img-msg img { max-width: 220px; max-height: 220px; border-radius: 12px; display: block; cursor: pointer; }
+        .msg.mine.img-msg { align-self: flex-end; }
+        .msg.theirs.img-msg { align-self: flex-start; }
+
+        .chat-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-top: 1px solid #161616;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+            -webkit-app-region: no-drag;
+        }
+        .chat-input input {
+            flex: 1;
+            font-size: 14px;
+            letter-spacing: 0;
+            font-weight: 400;
+            padding: 10px 14px;
+            width: auto;
+            text-align: left;
+        }
+        .btn-attach {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            color: #666;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: color 0.15s;
+            -webkit-app-region: no-drag;
+        }
+        .btn-attach:hover { color: #fff; }
+
+        /* D&D overlay */
+        .drop-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            border: 2px dashed #444;
+            border-radius: 12px;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            pointer-events: none;
+        }
+        .drop-overlay.active { display: flex; }
+
+        .status { font-size: 11px; color: #333; margin-top: 20px; -webkit-app-region: no-drag; }
+        .error { color: #633; }
+    </style>
+</head>
+<body>
+
+<!-- Главный экран -->
+<div class="screen active" id="screen-home">
+    <div class="logo">
+        <div class="logo-icon">◈</div>
+        <div class="logo-name">Phantom</div>
+        <div class="logo-sub">EPHEMERAL · ENCRYPTED · P2P</div>
+    </div>
+    <div class="actions">
+        <button class="btn-primary" onclick="startSession()">Start session</button>
+        <button class="btn-secondary" onclick="showJoin()">Join</button>
+    </div>
+    <div class="status" id="home-status"></div>
+    <div style="position:absolute; bottom:20px; font-size:11px; color:#666; -webkit-app-region:no-drag;">ver. 0.2.1</div>
+</div>
+
+<!-- Ожидание пира -->
+<div class="screen" id="screen-waiting">
+    <div class="fp-box" onclick="copyCode()" style="cursor:pointer;">
+        <div class="fp-label">YOUR CODE</div>
+        <div class="fp-code" id="my-fp">——</div>
+        <div class="fp-hint" id="fp-hint">click to copy · share with peer</div>
+    </div>
+    <div class="status">waiting for peer...</div>
+</div>
+
+<!-- Join -->
+<div class="screen" id="screen-join">
+    <div class="logo" style="margin-bottom: 32px;">
+        <div class="logo-name" style="font-size:20px;">Enter code</div>
+    </div>
+    <div class="join-box">
+        <input id="join-input" maxlength="6" placeholder="A3F722" autofocus
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter') joinSession()" />
+        <button class="btn-primary" style="width:220px" onclick="joinSession()">Connect</button>
+        <button class="btn-secondary" style="width:220px" onclick="showScreen('screen-home')">Back</button>
+    </div>
+    <div class="status" id="join-status"></div>
+</div>
+
+<!-- Чат -->
+<div class="screen" id="screen-chat" style="gap:0; justify-content:flex-start; position:relative;">
+    <div class="drop-overlay" id="drop-overlay">отпусти для отправки</div>
+    <div class="chat-header">
+        <div class="peer-dot"></div>
+        <div class="peer-fp" id="peer-fp-label">——</div>
+        <div class="peer-name">· encrypted</div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="chat-input">
+        <button class="btn-attach" onclick="document.getElementById('file-input').click()">+</button>
+        <input id="file-input" type="file" accept="image/*" style="display:none"
+            onchange="handleFileInput(this)"/>
+        <input id="msg-input" placeholder="Message..."
+            onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button class="btn-send" onclick="sendMessage()">↑</button>
+    </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function setLoading(buttons, loading) {
+    Array.from(buttons).forEach(btn => {
+        btn.disabled = loading;
+        if (loading) btn.dataset.orig = btn.textContent;
+        else btn.textContent = btn.dataset.orig || btn.textContent;
+    });
+}
+
+async function startSession() {
+    const btns = document.querySelectorAll('#screen-home button');
+    setLoading(btns, true);
+    document.getElementById('home-status').textContent = 'generating keys...';
+    try {
+        const fp = await ipcRenderer.invoke('start-session');
+        document.getElementById('my-fp').textContent = fp;
+        showScreen('screen-waiting');
+    } catch(e) {
+        document.getElementById('home-status').textContent = 'error: ' + e.message;
+        document.getElementById('home-status').className = 'status error';
+    } finally {
+        setLoading(btns, false);
+    }
+}
+
+function showJoin() {
+    showScreen('screen-join');
+    setTimeout(() => document.getElementById('join-input').focus(), 100);
+}
+
+async function joinSession() {
+    const fp = document.getElementById('join-input').value.trim();
+    if (fp.length < 6) return;
+    const btns = document.querySelectorAll('#screen-join button');
+    setLoading(btns, true);
+    document.getElementById('join-input').disabled = true;
+    document.getElementById('join-status').textContent = 'connecting...';
+    document.getElementById('join-status').className = 'status';
+    try {
+        const myFp = await ipcRenderer.invoke('join-session', fp);
+        openChat(fp, myFp);
+    } catch(e) {
+        document.getElementById('join-status').textContent = e.message;
+        document.getElementById('join-status').className = 'status error';
+    } finally {
+        setLoading(btns, false);
+        document.getElementById('join-input').disabled = false;
+    }
+}
+
+function copyCode() {
+    const code = document.getElementById('my-fp').textContent;
+    if (code === '——') return;
+    navigator.clipboard.writeText(code);
+    const hint = document.getElementById('fp-hint');
+    hint.textContent = 'copied!';
+    setTimeout(() => hint.textContent = 'click to copy · share with peer', 1500);
+}
+
+function openChat(peerFp, myFp) {
+    document.getElementById('peer-fp-label').textContent = peerFp;
+    addSystemMsg('session established · end-to-end encrypted');
+    showScreen('screen-chat');
+    setTimeout(() => document.getElementById('msg-input').focus(), 100);
+}
+
+async function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const btn = document.querySelector('.btn-send');
+    input.disabled = true;
+    btn.disabled = true;
+    input.value = '';
+    addMsg(text, 'mine');
+    try {
+        await ipcRenderer.invoke('send-message', text);
+    } finally {
+        input.disabled = false;
+        btn.disabled = false;
+        input.focus();
+    }
+}
+
+function addMsg(text, type) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + type;
+    div.textContent = text;
+    const msgs = document.getElementById('messages');
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addImgMsg(src, type) {
+    const div = document.createElement('div');
+    div.className = `msg img-msg ${type}`;
+    const img = document.createElement('img');
+    img.src = src;
+    img.onclick = () => ipcRenderer.invoke('open-image', src);
+    div.appendChild(img);
+    const msgs = document.getElementById('messages');
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addSystemMsg(text) {
+    addMsg(text, 'system');
+}
+
+// ── Изображения ──
+
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            const MAX = 300;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = w * MAX / h; h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            // Сжимаем до ~30KB чтобы влезть в Nostr relay лимит 64KB
+            let quality = 0.5;
+            let dataUrl = canvas.toDataURL('image/jpeg', quality);
+            while (dataUrl.length > 15000 && quality > 0.1) {
+                quality -= 0.1;
+                dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+            resolve(dataUrl);
+        };
+        img.src = url;
+    });
+}
+
+async function sendImage(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const src = await compressImage(file);
+    const payload = JSON.stringify({ type: 'image', src });
+    if (payload.length > 20000) {
+        addSystemMsg('image too large to send');
+        return;
+    }
+    addImgMsg(src, 'mine');
+    await ipcRenderer.invoke('send-message', payload);
+}
+
+// Кнопка +
+function handleFileInput(input) {
+    if (input.files[0]) sendImage(input.files[0]);
+    input.value = '';
+}
+
+// Paste (Cmd+V)
+document.addEventListener('paste', (e) => {
+    if (!document.getElementById('screen-chat').classList.contains('active')) return;
+    const item = [...e.clipboardData.items].find(i => i.type.startsWith('image/'));
+    if (item) sendImage(item.getAsFile());
+});
+
+// Drag & Drop
+const chatScreen = document.getElementById('screen-chat');
+const dropOverlay = document.getElementById('drop-overlay');
+
+chatScreen.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropOverlay.classList.add('active');
+});
+chatScreen.addEventListener('dragleave', (e) => {
+    if (!chatScreen.contains(e.relatedTarget)) dropOverlay.classList.remove('active');
+});
+chatScreen.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropOverlay.classList.remove('active');
+    const file = e.dataTransfer.files[0];
+    if (file) sendImage(file);
+});
+
+// События от main process
+ipcRenderer.on('peer-connected', (_, peerFp) => {
+    openChat(peerFp, null);
+});
+
+ipcRenderer.on('message', (_, raw) => {
+    try {
+        const parsed = JSON.parse(raw);
+        if (parsed.type === 'image') { addImgMsg(parsed.src, 'theirs'); return; }
+    } catch(e) {}
+    addMsg(raw, 'theirs');
+});
+</script>
+</body>
+</html>

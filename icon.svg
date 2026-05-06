@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#141414"/>
+      <stop offset="100%" style="stop-color:#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#aaaaaa;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+
+  <!-- Outer subtle border -->
+  <rect width="1024" height="1024" rx="230" fill="none" stroke="#2a2a2a" stroke-width="6"/>
+
+  <!-- ◈ shape: outer square rotated 45° -->
+  <g transform="translate(512,512)">
+    <!-- outer diamond -->
+    <polygon points="0,-310 310,0 0,310 -310,0"
+      fill="none" stroke="url(#gem)" stroke-width="36" stroke-linejoin="round"/>
+
+    <!-- inner diamond -->
+    <polygon points="0,-160 160,0 0,160 -160,0"
+      fill="none" stroke="url(#gem)" stroke-width="28" stroke-linejoin="round"/>
+
+    <!-- cross lines connecting outer to inner -->
+    <line x1="0" y1="-310" x2="0" y2="-160" stroke="url(#gem)" stroke-width="28" stroke-linecap="round"/>
+    <line x1="310" y1="0" x2="160" y2="0" stroke="url(#gem)" stroke-width="28" stroke-linecap="round"/>
+    <line x1="0" y1="310" x2="0" y2="160" stroke="url(#gem)" stroke-width="28" stroke-linecap="round"/>
+    <line x1="-310" y1="0" x2="-160" y2="0" stroke="url(#gem)" stroke-width="28" stroke-linecap="round"/>
+
+    <!-- center dot -->
+    <circle cx="0" cy="0" r="28" fill="url(#gem)"/>
+  </g>
+</svg>

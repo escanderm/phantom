@@ -1,0 +1,49 @@
+{
+  "name": "phantom",
+  "version": "0.2.3",
+  "description": "P2P ephemeral encrypted messenger",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.phantom.messenger",
+    "productName": "Phantom",
+    "mac": {
+      "icon": "icon.icns",
+      "category": "public.app-category.social-networking",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Phantom",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "session.js",
+      "package.json",
+      "node_modules/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "ioredis": "^5.10.1",
+    "nostr-tools": "^1.17.0",
+    "ws": "^8.20.0"
+  }
+}
