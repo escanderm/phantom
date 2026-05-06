@@ -5,8 +5,8 @@
 A serverless encrypted messenger. No accounts. No servers. No history.  
 Every session is born and dies in RAM.
 
-![Phantom](https://img.shields.io/badge/version-0.2.3-white?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-macOS-white?style=flat-square)
+![Version](https://img.shields.io/github/v/release/escanderm/phantom?style=flat-square&color=white)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-white?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-white?style=flat-square)
 
 ---
