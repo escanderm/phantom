@@ -1,30 +1,27 @@
 const crypto = require('crypto');
-const Redis = require('ioredis');
-
-const REDIS_URL = 'rediss://default:gQAAAAAAAVogAAIgcDIwOGQ0YmJkZmIxMmI0NjkxOWMzNTFmZDRiNTZiYzcyMA@glowing-horse-88608.upstash.io:6379';
-const SESSION_TTL = 300;
-
-// ── NOSTR (закомментировано — relay слишком ненадёжны для persistent сессий) ──
-// const { generatePrivateKey, getPublicKey, signEvent, getEventHash, SimplePool } = require('nostr-tools');
-// const RELAYS = ['wss://relay.damus.io', 'wss://nos.lol'];
+const Hyperswarm = require('hyperswarm');
+const b4a = require('b4a');
 
 class Session {
     constructor() {
-        this.x25519Keys      = null;
-        this.fingerprint     = null;
-        this.peerFingerprint = null;
-        this.sharedSecret    = null;
-        this._pubKeyPem      = null;
-        this.redis           = null;
-        this.sub             = null;
-        this.onMessage       = null;
-        this.onPeerConnected = null;
-        this._seenIds        = new Set();
+        this.x25519Keys         = null;
+        this.fingerprint        = null;
+        this.peerFingerprint    = null;
+        this.sharedSecret       = null;
+        this._pubKeyPem         = null;
+        this.swarm              = null;
+        this.peerStream         = null;
+        this._buffer            = null;
+        this._discovery         = null;
+        this.onMessage          = null;
+        this.onPeerConnected    = null;
+        this.onPeerDisconnected = null;
+        this.onPeerPresence     = null;
     }
 
     async connect() {
-        this.redis = new Redis(REDIS_URL);
-        this.sub   = new Redis(REDIS_URL);
+        this.swarm = new Hyperswarm();
+        this.swarm.on('connection', (conn) => this._handleConnection(conn));
     }
 
     generateKeys() {
@@ -36,75 +33,119 @@ class Session {
         return this.fingerprint;
     }
 
+    _topic(fp) {
+        return crypto.createHash('sha256').update('phantom:' + fp).digest();
+    }
+
     async startSession() {
-        await this.redis.set(`phantom:${this.fingerprint}`, this._pubKeyPem, 'EX', SESSION_TTL);
+        const topic = this._topic(this.fingerprint);
+        this._discovery = this.swarm.join(topic, { server: true, client: false });
+        await this._discovery.flushed();
+    }
 
-        await this.sub.subscribe(`phantom:peer:${this.fingerprint}`);
-        this.sub.on('message', async (channel, message) => {
+    async joinSession(fingerprint, { timeoutMs = 30000 } = {}) {
+        const topic = this._topic(fingerprint);
+        this._discovery = this.swarm.join(topic, { server: false, client: true });
+
+        await new Promise((resolve, reject) => {
+            const timer = setTimeout(async () => {
+                try { await this._discovery.destroy(); } catch {}
+                reject(new Error('Peer not found — session expired or invalid code'));
+            }, timeoutMs);
+
+            const onConnection = () => {
+                clearTimeout(timer);
+                this.swarm.off('connection', onConnection);
+                resolve();
+            };
+            this.swarm.on('connection', onConnection);
+
+            this.swarm.flush().catch(() => {});
+        });
+    }
+
+    _handleConnection(conn) {
+        if (this.peerStream) {
+            // already paired with someone — drop duplicate routes
+            conn.destroy();
+            return;
+        }
+        this.peerStream = conn;
+        this._buffer = b4a.alloc(0);
+
+        conn.on('data',  (chunk) => this._handleStreamData(chunk));
+        conn.on('close', ()      => this._handleStreamClose());
+        conn.on('error', (err)   => console.error('[swarm] stream error:', err.message));
+
+        // both sides immediately announce themselves; DH is symmetric so order doesn't matter
+        this._sendFrame({
+            type:   'hello',
+            fp:     this.fingerprint,
+            pubkey: this._pubKeyPem,
+        });
+    }
+
+    _handleStreamData(chunk) {
+        this._buffer = b4a.concat([this._buffer, chunk]);
+        while (this._buffer.length >= 4) {
+            const len = this._buffer.readUInt32BE(0);
+            if (this._buffer.length < 4 + len) break;
+            const payload = this._buffer.slice(4, 4 + len);
+            this._buffer  = this._buffer.slice(4 + len);
             try {
-                if (channel === `phantom:peer:${this.fingerprint}`) {
-                    const data = JSON.parse(message);
-                    await this._establishSession(data.pubkey, data.fp);
-                } else {
-                    this._handleIncoming(message);
-                }
-            } catch(e) { console.error('[redis] message error:', e); }
-        });
+                this._handleFrame(JSON.parse(payload.toString('utf8')));
+            } catch(e) {
+                console.error('[swarm] frame parse error:', e.message);
+            }
+        }
     }
 
-    async joinSession(fingerprint) {
-        const peerPubKeyPem = await this.redis.get(`phantom:${fingerprint}`);
-        if (!peerPubKeyPem) throw new Error('Session not found or expired');
-
-        const replyPayload = JSON.stringify({ fp: this.fingerprint, pubkey: this._pubKeyPem });
-        await this.redis.publish(`phantom:peer:${fingerprint}`, replyPayload);
-        await this.redis.del(`phantom:${fingerprint}`);
-
-        // Ставим обработчик сообщений (у хоста он в startSession, у джойнера — здесь)
-        this.sub.on('message', (channel, message) => {
-            try { this._handleIncoming(message); } catch(e) {}
-        });
-
-        await this._establishSession(peerPubKeyPem, fingerprint);
+    _handleFrame(msg) {
+        if (msg.type === 'hello') {
+            this._establishSession(msg.pubkey, msg.fp);
+        } else if (msg.type === 'msg') {
+            const text = this._decrypt(msg.data);
+            if (this.onMessage) this.onMessage(text);
+        } else if (msg.type === 'presence') {
+            if (this.onPeerPresence) this.onPeerPresence(msg.state);
+        }
     }
 
-    async _establishSession(peerPubKeyPem, peerFp) {
+    _sendFrame(obj) {
+        if (!this.peerStream) return;
+        const payload = b4a.from(JSON.stringify(obj), 'utf8');
+        const header  = b4a.alloc(4);
+        header.writeUInt32BE(payload.length, 0);
+        this.peerStream.write(b4a.concat([header, payload]));
+    }
+
+    _establishSession(peerPubKeyPem, peerFp) {
+        if (this.sharedSecret) return; // already handshaken
         const peerPublicKey = crypto.createPublicKey(peerPubKeyPem);
         this.sharedSecret = crypto.diffieHellman({
             privateKey: this.x25519Keys.privateKey,
-            publicKey: peerPublicKey,
+            publicKey:  peerPublicKey,
         });
         this.peerFingerprint = peerFp;
-        console.log('[redis] session established with:', this.peerFingerprint);
-
-        const chatChannel = this._chatChannel();
-        await this.sub.subscribe(chatChannel);
-
+        console.log('[swarm] session established with:', this.peerFingerprint);
         if (this.onPeerConnected) this.onPeerConnected(this.peerFingerprint);
     }
 
-    _handleIncoming(raw) {
-        try {
-            const msg = JSON.parse(raw);
-            if (msg.from === this.fingerprint) return;
-            if (this._seenIds.has(msg.id)) return;
-            if (msg.id) this._seenIds.add(msg.id);
-            const text = this._decrypt(msg.data);
-            if (this.onMessage) this.onMessage(text);
-        } catch(e) {}
+    _handleStreamClose() {
+        const wasConnected = !!this.sharedSecret;
+        this.peerStream  = null;
+        this._buffer     = null;
+        if (wasConnected && this.onPeerDisconnected) this.onPeerDisconnected();
     }
 
     async sendMessage(text) {
-        const id = crypto.randomBytes(8).toString('hex');
-        await this.redis.publish(this._chatChannel(), JSON.stringify({
-            from: this.fingerprint,
-            id,
-            data: this._encrypt(text),
-        }));
+        if (!this.peerStream) throw new Error('no peer connected');
+        this._sendFrame({ type: 'msg', data: this._encrypt(text) });
     }
 
-    _chatChannel() {
-        return `phantom:chat:${[this.fingerprint, this.peerFingerprint].sort().join(':')}`;
+    sendPresence(state) {
+        if (!this.peerStream) return;
+        this._sendFrame({ type: 'presence', state });
     }
 
     _encrypt(text) {
@@ -128,10 +169,12 @@ class Session {
     }
 
     async close() {
-        await this.redis?.quit();
-        await this.sub?.quit();
+        try { this.peerStream?.end(); } catch {}
+        try { await this.swarm?.destroy(); } catch {}
         this.x25519Keys   = null;
         this.sharedSecret = null;
+        this.peerStream   = null;
+        this._buffer      = null;
     }
 }
 

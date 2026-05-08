@@ -24,6 +24,9 @@ function createWindow() {
     });
 
     win.loadFile('index.html');
+
+    win.on('focus', () => session.sendPresence('active'));
+    win.on('blur',  () => session.sendPresence('away'));
 }
 
 app.whenReady().then(async () => {
@@ -46,27 +49,24 @@ ipcMain.handle('start-session', async () => {
     const fingerprint = session.generateKeys();
     await session.startSession();
 
-    session.onPeerConnected = (peerFp) => {
-        win.webContents.send('peer-connected', peerFp);
-    };
-    session.onMessage = (text) => {
-        win.webContents.send('message', text);
-    };
-
+    wireSessionEvents();
     return fingerprint;
 });
 
 // Присоединиться по fingerprint
 ipcMain.handle('join-session', async (_, fingerprint) => {
     session.generateKeys();
-
-    session.onMessage = (text) => {
-        win.webContents.send('message', text);
-    };
-
+    wireSessionEvents();
     await session.joinSession(fingerprint.trim().toUpperCase());
     return session.fingerprint;
 });
+
+function wireSessionEvents() {
+    session.onPeerConnected    = (peerFp) => win.webContents.send('peer-connected', peerFp);
+    session.onPeerDisconnected = ()       => win.webContents.send('peer-disconnected');
+    session.onPeerPresence     = (state)  => win.webContents.send('peer-presence', state);
+    session.onMessage          = (text)   => win.webContents.send('message', text);
+}
 
 // Отправить сообщение
 ipcMain.handle('send-message', async (_, text) => {

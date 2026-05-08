@@ -131,7 +131,9 @@
             -webkit-app-region: drag;
             flex-shrink: 0;
         }
-        .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3; flex-shrink: 0; }
+        .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3; flex-shrink: 0; transition: background 0.2s; }
+        .peer-dot.away    { background: #c90; }
+        .peer-dot.offline { background: #c33; }
         .peer-name { font-size: 13px; color: #666; }
         .peer-fp { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
 
@@ -281,9 +283,9 @@
 <div class="screen" id="screen-chat" style="gap:0; justify-content:flex-start; position:relative;">
     <div class="drop-overlay" id="drop-overlay">отпусти для отправки</div>
     <div class="chat-header">
-        <div class="peer-dot"></div>
+        <div class="peer-dot" id="peer-dot"></div>
         <div class="peer-fp" id="peer-fp-label">——</div>
-        <div class="peer-name">· encrypted</div>
+        <div class="peer-name" id="peer-status">· encrypted</div>
     </div>
     <div class="messages" id="messages"></div>
     <div class="chat-input">
@@ -339,7 +341,7 @@ async function joinSession() {
     const btns = document.querySelectorAll('#screen-join button');
     setLoading(btns, true);
     document.getElementById('join-input').disabled = true;
-    document.getElementById('join-status').textContent = 'connecting...';
+    document.getElementById('join-status').textContent = 'searching for peer...';
     document.getElementById('join-status').className = 'status';
     try {
         const myFp = await ipcRenderer.invoke('join-session', fp);
@@ -515,9 +517,27 @@ Notification.requestPermission();
 
 ipcRenderer.on('peer-connected', (_, peerFp) => {
     openChat(peerFp, null);
+    setPeerStatus('active');
     playBeep();
     notify('Phantom', `${peerFp} connected`);
 });
+
+ipcRenderer.on('peer-disconnected', () => {
+    setPeerStatus('offline');
+});
+
+ipcRenderer.on('peer-presence', (_, state) => {
+    setPeerStatus(state);
+});
+
+function setPeerStatus(state) {
+    const dot   = document.getElementById('peer-dot');
+    const label = document.getElementById('peer-status');
+    dot.classList.remove('away', 'offline');
+    if (state === 'active')  { label.textContent = '· encrypted'; }
+    if (state === 'away')    { dot.classList.add('away');    label.textContent = '· away'; }
+    if (state === 'offline') { dot.classList.add('offline'); label.textContent = '· offline'; }
+}
 
 ipcRenderer.on('message', (_, raw) => {
     try {

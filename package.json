@@ -1,10 +1,11 @@
 {
   "name": "phantom",
-  "version": "0.3.3",
+  "version": "0.4.1",
   "description": "P2P ephemeral encrypted messenger",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
     "build": "electron-builder --mac",
     "build:linux": "electron-builder --linux --publish never",
     "build:win": "electron-builder --win --publish never",
@@ -16,18 +17,23 @@
     "mac": {
       "icon": "icon.icns",
       "category": "public.app-category.social-networking",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "arm64",
+            "x64"
           ]
         }
       ]
     },
     "dmg": {
       "title": "Phantom",
-      "window": { "width": 540, "height": 380 }
+      "window": {
+        "width": 540,
+        "height": 380
+      }
     },
     "linux": {
       "target": "AppImage",
@@ -50,8 +56,7 @@
     "electron-builder": "^26.8.1"
   },
   "dependencies": {
-    "ioredis": "^5.10.1",
-    "nostr-tools": "^1.17.0",
-    "ws": "^8.20.0"
+    "b4a": "^1.8.1",
+    "hyperswarm": "^4.17.0"
   }
 }
