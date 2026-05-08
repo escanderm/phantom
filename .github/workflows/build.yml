@@ -6,7 +6,22 @@ on:
       - 'v*'
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' does not match package.json version '$PKG'. Bump package.json before tagging."
+            exit 1
+          fi
+          echo "OK: tag $GITHUB_REF_NAME matches package.json version $PKG"
+
   build-mac:
+    needs: verify
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +36,7 @@ jobs:
           path: dist/*.dmg
 
   build-linux:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +51,7 @@ jobs:
           path: dist/*.AppImage
 
   build-win:
+    needs: verify
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
