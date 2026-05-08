@@ -15,21 +15,21 @@ Every session is born and dies in RAM.
 
 1. **Start a session** — a keypair is generated in memory, you get a 6-character code
 2. **Share the code** — send it to your peer via any channel (voice, text, whatever)
-3. **Connect** — your peer enters the code, keys are exchanged, session begins
-4. **Chat** — all messages encrypted end-to-end, images supported
+3. **Connect** — your peer enters the code, peers find each other on the DHT and connect directly
+4. **Chat** — all messages encrypted end-to-end, images supported, peer presence visible (active / away / offline)
 5. **Close** — session ends, everything is gone. No logs. No trace.
 
 ```
-Alice                          Nostr relay                        Bob
-  |                                 |                              |
-  |── publishes session code ──────►|                              |
-  |                                 |◄── seek ─────────────────────|
-  |◄── re-publishes handshake ──────|                              |
-  |                                 |── handshake ────────────────►|
-  |◄── reply with Bob's pubkey ─────|                              |
-  |                                 |                              |
-  |════════ E2E encrypted chat (AES-256-GCM) ════════════════════|
+Alice                            DHT discovery                          Bob
+  |                                    |                                  |
+  |── join topic = sha256("phantom:" + fp) ──►|◄── join same topic ───────|
+  |                                    |                                  |
+  |◄═══════ direct P2P connection (hole-punched) ═══════════════════════►|
+  |                                                                       |
+  |═══ X25519 handshake → AES-256-GCM chat (no relay sees traffic) ══════|
 ```
+
+After the DHT brings the two peers together, traffic flows **directly between them** — no intermediary holds, forwards, or sees a single byte.
 
 ---
 
@@ -37,14 +37,25 @@ Alice                          Nostr relay                        Bob
 
 | What | How |
 |---|---|
+| Discovery | Hyperswarm DHT — finds peers by topic hash, no accounts |
+| Connection | Direct P2P with NAT hole-punching (Noise-encrypted by Hyperswarm) |
 | Key exchange | X25519 ECDH — ephemeral, generated per session |
-| Message encryption | AES-256-GCM with shared secret |
-| Transport | Nostr public relays — no registration, no ownership |
+| Message encryption | AES-256-GCM with shared secret (on top of Noise) |
 | Storage | None — everything lives in RAM only |
 | Identity | None — no accounts, no phone numbers, no emails |
 
-No server holds your keys. No server holds your messages.  
-The relay sees only encrypted blobs and doesn't know who you are.
+No server holds your keys. No server holds your messages. After DHT discovery, **there is no third party in the data path** — peers are talking to each other directly.
+
+---
+
+## Versions
+
+| Version | Transport | Notes |
+|---|---|---|
+| **v0.4.0+** | Hyperswarm DHT | Pure P2P. No relay sees traffic. Recommended. |
+| v0.3.3 | Upstash Redis pub/sub | Legacy build. Use only if DHT discovery is blocked in your network. |
+
+Both builds are kept in [releases](../../releases) — pick whichever fits your environment.
 
 ---
 
@@ -54,7 +65,8 @@ The relay sees only encrypted blobs and doesn't know who you are.
 
 | Platform | File | Notes |
 |---|---|---|
-| macOS | `Phantom-x.x.x-universal.dmg` | Apple Silicon + Intel |
+| macOS (Apple Silicon) | `Phantom-x.x.x-arm64.dmg` | M1 / M2 / M3 |
+| macOS (Intel) | `Phantom-x.x.x-x64.dmg` | Intel chips |
 | Linux | `Phantom-x.x.x.AppImage` | No installation required |
 | Windows | `Phantom.Setup.x.x.x.exe` | NSIS installer |
 
@@ -72,7 +84,7 @@ git clone git@github.com:escanderm/phantom.git
 cd phantom
 npm install
 npm start            # run in dev mode
-npm run build        # build macOS DMG
+npm run build:mac    # build macOS DMG (arm64 + x64)
 npm run build:linux  # build Linux AppImage
 npm run build:win    # build Windows installer
 ```
@@ -84,7 +96,7 @@ Requires Node.js 22+.
 ## Stack
 
 - [Electron](https://electronjs.org) — desktop shell
-- [nostr-tools](https://github.com/nbd-wtf/nostr-tools) — P2P relay transport
+- [Hyperswarm](https://github.com/holepunchto/hyperswarm) — DHT-based P2P discovery and hole-punching
 - Node.js built-in `crypto` — X25519 + AES-256-GCM
 
 ---
