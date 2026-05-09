@@ -1,6 +1,6 @@
 {
   "name": "phantom",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "P2P ephemeral encrypted messenger",
   "main": "main.js",
   "scripts": {

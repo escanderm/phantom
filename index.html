@@ -136,6 +136,7 @@
         .peer-dot.offline { background: #c33; }
         .peer-name { font-size: 13px; color: #666; }
         .peer-fp { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+        .chat-ver { font-size: 11px; color: #444; margin-left: auto; letter-spacing: 0.5px; }
 
         .messages {
             flex: 1;
@@ -251,7 +252,7 @@
     </div>
     <div class="status" id="home-status"></div>
     <div style="position:absolute; bottom:20px; font-size:11px; color:#666; -webkit-app-region:no-drag;" id="ver-label"></div>
-    <script>document.getElementById('ver-label').textContent = 'ver. ' + require('./package.json').version;</script>
+
 </div>
 
 <!-- Ожидание пира -->
@@ -286,6 +287,7 @@
         <div class="peer-dot" id="peer-dot"></div>
         <div class="peer-fp" id="peer-fp-label">——</div>
         <div class="peer-name" id="peer-status">· encrypted</div>
+        <div class="chat-ver" id="chat-ver-label"></div>
     </div>
     <div class="messages" id="messages"></div>
     <div class="chat-input">
@@ -300,6 +302,10 @@
 
 <script>
 const { ipcRenderer } = require('electron');
+
+const __ver = 'ver. ' + require('./package.json').version;
+document.getElementById('ver-label').textContent = __ver;
+document.getElementById('chat-ver-label').textContent = __ver;
 
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
