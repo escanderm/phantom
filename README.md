@@ -77,6 +77,27 @@ Both builds are kept in [releases](../../releases) — pick whichever fits your 
 
 ---
 
+## Verify your download
+
+Each release publishes a `SHA256SUMS.txt` alongside the binaries. After downloading, check the hash of your file matches the published one.
+
+**macOS / Linux:**
+```bash
+shasum -a 256 Phantom-*.dmg          # macOS
+sha256sum Phantom-*.AppImage         # Linux
+```
+
+**Windows (PowerShell):**
+```powershell
+Get-FileHash Phantom*.exe -Algorithm SHA256
+```
+
+Compare the output to the matching line in `SHA256SUMS.txt` from the release page. If the hash doesn't match — don't run the file. Re-download from [GitHub Releases](../../releases/latest) and check again.
+
+> **Why this matters:** since Phantom has no central server and no auto-update, the binary you download is the entire trust boundary. The hashes in `SHA256SUMS.txt` are produced by GitHub Actions from the tagged commit — the build process is in [`.github/workflows/build.yml`](.github/workflows/build.yml), reproducible by anyone. For maximum assurance, [build from source](#build-from-source) yourself.
+
+---
+
 ## Build from source
 
 ```bash

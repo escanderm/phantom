@@ -72,11 +72,22 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
+      - name: Collect artifacts and generate SHA256SUMS.txt
+        run: |
+          mkdir -p release
+          cp mac-dmg/*.dmg release/
+          cp linux-appimage/*.AppImage release/
+          cp win-exe/*.exe release/
+          cd release
+          sha256sum *.dmg *.AppImage *.exe > SHA256SUMS.txt
+          echo "--- SHA256SUMS.txt ---"
+          cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v1
         with:
           files: |
-            mac-dmg/*.dmg
-            linux-appimage/*.AppImage
-            win-exe/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.exe
+            release/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
