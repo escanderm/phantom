@@ -68,7 +68,7 @@ Both builds are kept in [releases](../../releases) — pick whichever fits your 
 | macOS (Apple Silicon) | `Phantom-x.x.x-arm64.dmg` | M1 / M2 / M3 |
 | macOS (Intel) | `Phantom-x.x.x-x64.dmg` | Intel chips |
 | Linux | `Phantom-x.x.x.AppImage` | No installation required |
-| Windows | `Phantom.Setup.x.x.x.exe` | NSIS installer |
+| Windows | `Phantom-Setup-x.x.x.exe` | NSIS installer |
 
 > **macOS first launch:** right-click → Open → Open Anyway  
 > Or in Terminal: `xattr -cr /Applications/Phantom.app`
