@@ -41,7 +41,8 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "icon.icns"
+      "icon": "icon.icns",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "files": [
       "index.html",
