@@ -110,7 +110,7 @@ npm run build:linux  # build Linux AppImage
 npm run build:win    # build Windows installer
 ```
 
-Requires Node.js 22+.
+Requires Node.js 22 or newer.
 
 ---
 
